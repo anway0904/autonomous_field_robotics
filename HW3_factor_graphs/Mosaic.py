@@ -2,6 +2,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import math
 
 class Mosaic():
     def __init__(self) -> None:
@@ -12,7 +13,7 @@ class Mosaic():
         self.T = None
         self.canvas_shape = None
         
-    def read_imgs_from_folder(self, path:str, resize_factor:float = 1) -> np.ndarray:
+    def read_imgs_from_folder(self, path:str, resize_factor:float, show_imgs:bool) -> np.ndarray:
         """
         Read images from a folder and resize them according to the resize factor.
 
@@ -35,26 +36,42 @@ class Mosaic():
         self.img_shape = resized_image.shape
         self.mosaic_imgs_gray = gray_images
 
+        if show_imgs:
+            subplot_rows = math.ceil(math.sqrt(self.num_imgs_mosaic))
+            subplot_cols = math.ceil(self.num_imgs_mosaic/subplot_rows)
+
+            _, ax = plt.subplots(subplot_rows, subplot_cols)
+            ax = ax.flatten()
+            for img in range(self.num_imgs_mosaic):
+                ax[img].imshow(self.mosaic_imgs_gray[img], cmap="gray")
+                ax[img].axis("off")
+                ax[img].set_title(f"Image {img+1}")
+
+            plt.tight_layout()
+            plt.show()
+
     def calculate_min_max_coordinates(self, homographies:np.ndarray) -> tuple[np.ndarray]:
         """
         Transform the corners of the image to find the maximum and the minimum limits after the transformation is applied.
 
         """
         img_y, img_x, _ = self.img_shape
-        central_img_idx = self.num_imgs_mosaic//2
 
         img_corners = np.array([[0, 0], [0, img_y], [img_x, img_y], [img_x, 0]], dtype=np.float32).reshape(-1, 1, 2)
+        
+        min_x = min_y = np.inf
+        max_x = max_y = -np.inf
 
-        transformed_corners_first = cv2.perspectiveTransform(np.copy(img_corners), homographies[0])
-        transformed_corners_last = cv2.perspectiveTransform(np.copy(img_corners), homographies[-1])
+        for i, H in enumerate(homographies):
+            transformed_corners = cv2.perspectiveTransform(np.copy(img_corners), H)
 
-        transformed_corners_x = np.concat((transformed_corners_first.ravel(), transformed_corners_last.ravel()))[::2]
-        transformed_corners_y = np.concat((transformed_corners_first.ravel(), transformed_corners_last.ravel()))[1::2]
+            transformed_corners_x = transformed_corners.ravel()[::2]
+            transformed_corners_y = transformed_corners.ravel()[1::2]
 
-        min_x = min(transformed_corners_x)
-        max_x = max(transformed_corners_x)
-        min_y = min(transformed_corners_y)
-        max_y = max(transformed_corners_y)
+            min_x = min(min_x, *transformed_corners_x)
+            max_x = max(max_x, *transformed_corners_x)
+            min_y = min(min_y, *transformed_corners_y)
+            max_y = max(max_y, *transformed_corners_y)
 
         return min_x, min_y, max_x, max_y 
     
@@ -101,6 +118,6 @@ class Mosaic():
         img_y, img_x, _ = self.img_shape
         img_corners = np.array([[0, 0], [0, img_y], [img_x, img_y], [img_x, 0]], dtype=np.float32).reshape(-1, 1, 2)
 
-        transformed_corners = cv2.perspectiveTransform(np.copy(img_corners), self.T @ H)
+        transformed_corners = cv2.perspectiveTransform(img_corners, self.T @ H)
 
         return transformed_corners.reshape((-1, 2))
