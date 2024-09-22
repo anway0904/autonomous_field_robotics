@@ -18,6 +18,8 @@ class Features():
                                         edgeThreshold = edge_threshold,
                                         sigma = sigma)
         
+        # self.detector = cv2.SIFT_create()
+        
     
     def detect_keypoints(self, 
                         images:list,
@@ -59,63 +61,64 @@ class Features():
 
         """
         Match features in image 1 and image 2
-        For FLANN based matcher, we need to pass two dictionaries which specifies the algorithm to be used, 
-        its related parameters etc. For algorithms like SIFT, the following can be used:
         """
-        FLANN_INDEX_KDTREE = 1
-        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-        search_params = dict(checks=50)   # or pass empty dictionary
-
-        matcher = cv2.FlannBasedMatcher(index_params, search_params)
+        matcher = cv2.BFMatcher()
 
         plt.figure()
         matches = matcher.knnMatch(descriptor_1, descriptor_2, k=2)
         
-        # Need to draw only good matches, so create a mask
-        matchesMask = [[0,0] for i in range(len(matches))]
-        
         good_matches = []
-        
         # ratio test
-        for i,(m,n) in enumerate(matches):
-            if m.distance < 0.85*n.distance:
-                matchesMask[i]=[1,0]
-                good_matches.append(m)
+        for m,n in matches:
+            if m.distance < 0.8*n.distance:
+                good_matches.append([m])
         
-        draw_params = dict(matchColor = (255,255,100), matchesMask = matchesMask)
         matches_img = cv2.drawMatchesKnn(image_1,keypoint_1,
                                          image_2,keypoint_2,
-                                         matches, None,
-                                         **draw_params)
+                                         good_matches, None)
                 
         plt.imshow(matches_img)
         plt.axis('off')
         plt.tight_layout()
 
-
-        height_1, width_1 = image_1.shape
-        height_2, width_2 = image_2.shape
-        
         # Extract pixel coordinates of the matched keypoints
-        points_x      = np.float32([keypoint_1[m.queryIdx].pt for m in good_matches]).reshape(-1,1,2)
-        points_x_dash = np.float32([keypoint_2[m.trainIdx].pt for m in good_matches]).reshape(-1,1,2)
-        
-        # for i, match in enumerate(good_matches):
-        #     img1_idx = match.queryIdx
-        #     img2_idx = match.trainIdx
-
-        #     # Get the pixel coordinates of the matched keypoints
-        #     (x1, y1) = keypoint_1[img1_idx].pt  # keypoint in image1
-        #     (x2, y2) = keypoint_2[img2_idx].pt  # keypoint in image2
-
-        #     # Normalize coordinates
-        #     x1_norm = x1 / width_1
-        #     y1_norm = y1 / height_1
-        #     x2_norm = x2 / width_2
-        #     y2_norm = y2 / height_2
-
-        #     # Store the normalized coordinates. y and x reversed to match with indexing beginning top left (as np array)
-        #     points_x.append([x1_norm, y1_norm])
-        #     points_x_dash.append([x2_norm, y2_norm])
+        points_x      = np.float32([keypoint_1[m[0].queryIdx].pt for m in good_matches]).reshape(-1,1,2)
+        points_x_dash = np.float32([keypoint_2[m[0].trainIdx].pt for m in good_matches]).reshape(-1,1,2)
             
         return points_x, points_x_dash
+    
+    def normalize(self,
+                  x:np.ndarray,
+                  x_dash:np.ndarray,
+                  shape:np.ndarray):
+        
+        height, width, _ = shape
+
+        # t_x = np.mean(x[:,:,0])
+        # t_y = np.mean(x[:,:,1])
+
+        # s_x = np.std(x[:,:,1])/np.sqrt(2)
+        # s_y = np.std(x[:,:,1])/np.sqrt(2)
+
+        # t_x_dash = np.mean(x_dash[:,:,0])
+        # t_y_dash = np.mean(x_dash[:,:,1])
+
+        # s_x_dash = np.std(x_dash[:,:,1])/np.sqrt(2)
+        # s_y_dash = np.std(x_dash[:,:,1])/np.sqrt(2)
+
+        t_x = t_x_dash = s_x = s_x_dash = width//2
+        t_y = t_y_dash = s_y = s_y_dash = height//2
+        
+        x_norm = np.divide(np.subtract(x, [[[t_x, t_y]]]), [[[s_x, s_y]]])
+        x_dash_norm = np.divide(np.subtract(x_dash, [[[t_x_dash, t_y_dash]]]), [[[s_x_dash, s_y_dash]]])
+
+        # De-normalization matrix 
+        T = np.array([[ 1/s_x,   0,    -t_x/s_x], 
+                      [  0,   1/s_y,   -t_y/s_y], 
+                      [  0,    0,        1   ]])
+        
+        T_dash = np.array([[ 1/s_x_dash,      0,     -t_x_dash/s_x_dash], 
+                           [     0,      1/s_y_dash, -t_y_dash/s_y_dash], 
+                           [     0,           0,              1        ]])
+        
+        return x_norm, x_dash_norm, T, T_dash
