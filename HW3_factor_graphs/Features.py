@@ -8,15 +8,21 @@ class Features():
         self.detector = None
 
     def create_sift(self, 
-                    n_features:int = 1000,
-                    contrast_threshold:float = 0.005,
-                    edge_threshold:int = 30,
-                    sigma:float = 0.6) -> None:
+                    n_features:int = 0, #1000
+                    n_octave_layers = 5,
+                    contrast_threshold:float = 0.03, #0.01
+                    edge_threshold:int = 10, #30
+                    sigma_:float = 1.0) -> None: #0.06
         
-        self.detector = cv2.SIFT_create(nfeatures = n_features,
+        # self.detector = cv2.SIFT_create(nfeatures = n_features,
+        #                                 nOctaveLayers = n_octave_layers,
+        #                                 contrastThreshold = contrast_threshold,
+        #                                 edgeThreshold = edge_threshold,
+        #                                 sigma = sigma)
+        self.detector = cv2.SIFT_create(
+                                        nOctaveLayers = n_octave_layers,
                                         contrastThreshold = contrast_threshold,
-                                        edgeThreshold = edge_threshold,
-                                        sigma = sigma)
+                                        sigma = sigma_)
         
         # self.detector = cv2.SIFT_create()
         
@@ -41,10 +47,12 @@ class Features():
             _, ax = plt.subplots(subplot_rows, subplot_cols)
             ax = ax.flatten()
 
-            for img in range(num_images):
-                ax[img].imshow(cv2.drawKeypoints(images[img], keypoints_arr[img], None))
+            for img in range(subplot_rows*subplot_cols):
+                if img < num_images:
+                    ax[img].imshow(cv2.drawKeypoints(images[img], keypoints_arr[img], None))
+                    ax[img].set_title(f"Image {img+1}")
+
                 ax[img].axis("off")
-                ax[img].set_title(f"Image {img+1}")
         
             plt.tight_layout()
             plt.show()
@@ -57,7 +65,8 @@ class Features():
                        keypoint_1:cv2.KeyPoint,
                        keypoint_2:cv2.KeyPoint, 
                        descriptor_1:np.ndarray,
-                       descriptor_2:np.ndarray):
+                       descriptor_2:np.ndarray,
+                       match_threshold:float):
 
         """
         Match features in image 1 and image 2
@@ -70,7 +79,7 @@ class Features():
         good_matches = []
         # ratio test
         for m,n in matches:
-            if m.distance < 0.8*n.distance:
+            if m.distance < match_threshold * n.distance:
                 good_matches.append([m])
         
         matches_img = cv2.drawMatchesKnn(image_1,keypoint_1,
@@ -93,18 +102,6 @@ class Features():
                   shape:np.ndarray):
         
         height, width, _ = shape
-
-        # t_x = np.mean(x[:,:,0])
-        # t_y = np.mean(x[:,:,1])
-
-        # s_x = np.std(x[:,:,1])/np.sqrt(2)
-        # s_y = np.std(x[:,:,1])/np.sqrt(2)
-
-        # t_x_dash = np.mean(x_dash[:,:,0])
-        # t_y_dash = np.mean(x_dash[:,:,1])
-
-        # s_x_dash = np.std(x_dash[:,:,1])/np.sqrt(2)
-        # s_y_dash = np.std(x_dash[:,:,1])/np.sqrt(2)
 
         t_x = t_x_dash = s_x = s_x_dash = width//2
         t_y = t_y_dash = s_y = s_y_dash = height//2

@@ -42,11 +42,13 @@ class Mosaic():
 
             _, ax = plt.subplots(subplot_rows, subplot_cols)
             ax = ax.flatten()
-            for img in range(self.num_imgs_mosaic):
-                ax[img].imshow(self.mosaic_imgs_gray[img], cmap="gray")
+            for img in range(subplot_rows*subplot_cols):
+                if img < self.num_imgs_mosaic:
+                    ax[img].imshow(self.mosaic_imgs_gray[img], cmap="gray")
+                    ax[img].set_title(f"Image {img+1}")
+                
                 ax[img].axis("off")
-                ax[img].set_title(f"Image {img+1}")
-
+                
             plt.tight_layout()
             plt.show()
 
