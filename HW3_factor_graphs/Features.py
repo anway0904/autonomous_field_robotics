@@ -8,19 +8,17 @@ class Features():
         self.detector = None
 
     def create_sift(self, 
-                    n_features:int = 0, #1000
                     n_octave_layers = 5,
-                    contrast_threshold:float = 0.03, #0.01
-                    edge_threshold:int = 10, #30
-                    sigma_:float = 1.0) -> None: #0.06
+                    contrast_threshold:float = 0.02, #0.01
+                    edge_threshold:int = 8.5, #30
+                    sigma_:float = 0.9) -> None: #0.06
         
-        # self.detector = cv2.SIFT_create(nfeatures = n_features,
-        #                                 nOctaveLayers = n_octave_layers,
+        # self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
         #                                 contrastThreshold = contrast_threshold,
         #                                 edgeThreshold = edge_threshold,
-        #                                 sigma = sigma)
-        self.detector = cv2.SIFT_create(
-                                        nOctaveLayers = n_octave_layers,
+        #                                 sigma = sigma_)
+        
+        self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
                                         contrastThreshold = contrast_threshold,
                                         sigma = sigma_)
         
@@ -44,12 +42,13 @@ class Features():
             subplot_rows = math.ceil(math.sqrt(num_images))
             subplot_cols = math.ceil(num_images/subplot_rows)
 
-            _, ax = plt.subplots(subplot_rows, subplot_cols)
+            _, ax = plt.subplots(subplot_rows, subplot_cols, figsize=(22, 10))
             ax = ax.flatten()
 
             for img in range(subplot_rows*subplot_cols):
                 if img < num_images:
-                    ax[img].imshow(cv2.drawKeypoints(images[img], keypoints_arr[img], None))
+                    ax[img].imshow(cv2.drawKeypoints(images[img], keypoints_arr[img], None, 
+                                                     flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
                     ax[img].set_title(f"Image {img+1}")
 
                 ax[img].axis("off")
@@ -66,14 +65,16 @@ class Features():
                        keypoint_2:cv2.KeyPoint, 
                        descriptor_1:np.ndarray,
                        descriptor_2:np.ndarray,
-                       match_threshold:float):
+                       match_threshold:float,
+                       plot:bool):
 
         """
         Match features in image 1 and image 2
         """
         matcher = cv2.BFMatcher()
 
-        plt.figure()
+        if plot:
+            plt.figure()
         matches = matcher.knnMatch(descriptor_1, descriptor_2, k=2)
         
         good_matches = []
@@ -85,17 +86,38 @@ class Features():
         matches_img = cv2.drawMatchesKnn(image_1,keypoint_1,
                                          image_2,keypoint_2,
                                          good_matches, None)
-                
-        plt.imshow(matches_img)
-        plt.axis('off')
-        plt.tight_layout()
+        if plot:
+            plt.imshow(matches_img)
+            plt.axis('off')
+            plt.tight_layout()
 
         # Extract pixel coordinates of the matched keypoints
         points_x      = np.float32([keypoint_1[m[0].queryIdx].pt for m in good_matches]).reshape(-1,1,2)
         points_x_dash = np.float32([keypoint_2[m[0].trainIdx].pt for m in good_matches]).reshape(-1,1,2)
             
-        return points_x, points_x_dash
+        return points_x, points_x_dash, good_matches
     
+    def draw_inliers(self, 
+                     mask:np.ndarray,
+                     matches:np.ndarray,
+                     image_1:np.ndarray, 
+                     image_2:np.ndarray,
+                     keypoints_1:np.ndarray,
+                     keypoints_2:np.ndarray):
+        
+        plt.figure()
+        matches_img = cv2.drawMatchesKnn(image_1,keypoints_1,
+                                         image_2,keypoints_2,
+                                         matches, None,
+                                         matchesMask=mask,
+                                         flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        
+        plt.imshow(matches_img)
+        plt.axis('off')
+        plt.title("Inliers after RANSAC")
+        plt.tight_layout()
+
+        
     def normalize(self,
                   x:np.ndarray,
                   x_dash:np.ndarray,

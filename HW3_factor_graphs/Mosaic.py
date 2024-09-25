@@ -20,11 +20,13 @@ class Mosaic():
         """
         images = []
         gray_images = []
-        for image in sorted(os.listdir(path)):
+        for image in sorted(os.listdir(path), reverse=False):
             original_image = (cv2.cvtColor(cv2.imread(os.path.join(path, image)), cv2.COLOR_BGR2RGB))
             resized_image = cv2.resize(original_image, (int(original_image.shape[1]*resize_factor),
                                                         int(original_image.shape[0]*resize_factor)))
-            gray_img = cv2.cvtColor(resized_image, cv2.COLOR_RGB2GRAY)
+            
+            gray_img = cv2.normalize(cv2.cvtColor(resized_image, cv2.COLOR_RGB2GRAY), 
+                                     None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
 
             images.append(resized_image)
             gray_images.append(gray_img)
@@ -48,9 +50,22 @@ class Mosaic():
                     ax[img].set_title(f"Image {img+1}")
                 
                 ax[img].axis("off")
-                
+            
             plt.tight_layout()
             plt.show()
+
+    def apply_radiometric_correction(self):
+        f = np.array(self.mosaic_imgs_gray)
+        f_dash_xy = np.mean(f, axis=0)
+        f_std = np.std(f, axis=0)
+
+        min_1 = 1/f_dash_xy
+        min_2 = 255/(f_dash_xy + (4 * f_std))
+
+        R = np.mean(f)*np.minimum(min_1, min_2)
+
+        self.radio_corrected_imgs = np.multiply(self.mosaic_imgs_gray, R).astype(np.uint8)
+
 
     def calculate_min_max_coordinates(self, homographies:np.ndarray) -> tuple[np.ndarray]:
         """
