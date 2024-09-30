@@ -9,18 +9,18 @@ class Features():
 
     def create_sift(self, 
                     n_octave_layers = 5,
-                    contrast_threshold:float = 0.02, #0.01
-                    edge_threshold:int = 8.5, #30
+                    contrast_threshold:float = 0.025, #0.01
+                    edge_threshold:int = 10, #30
                     sigma_:float = 0.9) -> None: #0.06
-        
-        # self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
-        #                                 contrastThreshold = contrast_threshold,
-        #                                 edgeThreshold = edge_threshold,
-        #                                 sigma = sigma_)
         
         self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
                                         contrastThreshold = contrast_threshold,
+                                        edgeThreshold = edge_threshold,
                                         sigma = sigma_)
+        
+        # self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
+        #                                 contrastThreshold = contrast_threshold,
+        #                                 sigma = sigma_)
         
         # self.detector = cv2.SIFT_create()
         
@@ -72,30 +72,32 @@ class Features():
         Match features in image 1 and image 2
         """
         matcher = cv2.BFMatcher()
-
-        if plot:
-            plt.figure()
         matches = matcher.knnMatch(descriptor_1, descriptor_2, k=2)
         
         good_matches = []
-        # ratio test
+        src_points = []
+        dst_points = []
+        
         for m,n in matches:
             if m.distance < match_threshold * n.distance:
                 good_matches.append([m])
+                src_points.append(keypoint_1[m.queryIdx].pt)
+                dst_points.append(keypoint_2[m.trainIdx].pt)
         
-        matches_img = cv2.drawMatchesKnn(image_1,keypoint_1,
-                                         image_2,keypoint_2,
-                                         good_matches, None)
+        src_points = np.float32(src_points).reshape(-1,1,2)
+        dst_points = np.float32(dst_points).reshape(-1,1,2)
+
         if plot:
+            plt.figure()
+            matches_img = cv2.drawMatchesKnn(image_1,keypoint_1,
+                                            image_2,keypoint_2,
+                                            good_matches, None)
+        
             plt.imshow(matches_img)
             plt.axis('off')
             plt.tight_layout()
 
-        # Extract pixel coordinates of the matched keypoints
-        points_x      = np.float32([keypoint_1[m[0].queryIdx].pt for m in good_matches]).reshape(-1,1,2)
-        points_x_dash = np.float32([keypoint_2[m[0].trainIdx].pt for m in good_matches]).reshape(-1,1,2)
-            
-        return points_x, points_x_dash, good_matches
+        return src_points, dst_points, good_matches
     
     def draw_inliers(self, 
                      mask:np.ndarray,
