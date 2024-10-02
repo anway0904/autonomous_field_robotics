@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from itertools import combinations, permutations
 
 def non_temporal_matching(mosaic :object,
                           features:object,
@@ -88,5 +89,53 @@ def non_temporal_matching(mosaic :object,
 
                 print(f"{src_img_idx} ---> {des_img_idx}: Match! ({covar = })")
                 matches_dict[(src_img_idx, des_img_idx)] = {"H": H, "error": covar}
+
+    return matches_dict
+
+def non_temporal_matching_bf(mosaic :object,
+                             features:object,
+                             homography:classmethod,
+                             keypoints_list:np.ndarray,
+                             descriptor_list:np.ndarray,
+                             pivot:int,
+                             match_thresh:float,
+                             ransac_thresh:float,
+                             inlier_thresh:int,
+                             plot:bool) -> dict:
+
+    matches_dict = {}
+   
+    for src_img_idx, des_img_idx in list(combinations(range(mosaic.num_imgs_mosaic), 2)):
+        if abs(src_img_idx - des_img_idx) == 1:
+            continue
+        
+        if (des_img_idx, src_img_idx) in matches_dict.keys():
+            continue
+
+        src_points, dst_points, _ = features.match_features(mosaic.mosaic_imgs_gray[src_img_idx], 
+                                                                    mosaic.mosaic_imgs_gray[des_img_idx],
+                                                                    keypoints_list[src_img_idx],
+                                                                    keypoints_list[des_img_idx],
+                                                                    descriptor_list[src_img_idx],
+                                                                    descriptor_list[des_img_idx],
+                                                                    match_threshold=match_thresh,
+                                                                    plot=False)
+        
+        H, inliers = cv2.findHomography(src_points, dst_points, cv2.RANSAC, ransac_thresh)
+
+        
+        good, covar = homography.is_good(H, inliers, inlier_thresh, src_points, dst_points)
+        if not good:
+            print(f"{src_img_idx} ---> {des_img_idx}: No match! ({np.count_nonzero(inliers)})")
+            continue
+        
+        if plot:
+            plt.figure()
+            w = cv2.warpPerspective(mosaic.mosaic_imgs_gray[src_img_idx], H, (mosaic.img_shape[1], mosaic.img_shape[0]))
+            plt.imshow(cv2.addWeighted(mosaic.mosaic_imgs_gray[des_img_idx], 0.5, w, 0.5, 10))
+            plt.title(f"src = {src_img_idx}  dst = {des_img_idx}")       
+
+        print(f"{src_img_idx} ---> {des_img_idx}: Match! ({covar = })")
+        matches_dict[(src_img_idx, des_img_idx)] = {"H": H, "error": covar}
 
     return matches_dict

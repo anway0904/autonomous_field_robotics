@@ -19,8 +19,8 @@ class Homography:
         src_transformed = cv2.perspectiveTransform(src, H)
         errors = np.linalg.norm(src_transformed.reshape(-1, 2) - dst.reshape(-1, 2), axis=1)
 
-        # if np.mean(errors) > 2:
-        #     return False, None
+        if np.mean(errors) > 5:
+            return False, None
              
         return True, np.mean(errors)
         

@@ -9,18 +9,19 @@ class Mosaic():
         self.num_imgs_mosaic = None
         self.mosaic_imgs = None
         self.mosaic_imgs_gray = None
+        self.clahe_images = None
         self.img_shape = None
         self.T = None
         self.canvas_shape = None
         
-    def read_imgs_from_folder(self, path:str, resize_factor:float, show_imgs:bool) -> np.ndarray:
+    def read_imgs_from_folder(self, path:str, resize_factor:float, show_imgs:bool, reverse:bool = False) -> np.ndarray:
         """
         Read images from a folder and resize them according to the resize factor.
 
         """
         images = []
         gray_images = []
-        for image in sorted(os.listdir(path), reverse=False):
+        for image in sorted(os.listdir(path), reverse=reverse):
             original_image = (cv2.cvtColor(cv2.imread(os.path.join(path, image)), cv2.COLOR_BGR2RGB))
             resized_image = cv2.resize(original_image, (int(original_image.shape[1]*resize_factor),
                                                         int(original_image.shape[0]*resize_factor)))
@@ -42,7 +43,7 @@ class Mosaic():
             subplot_rows = math.ceil(math.sqrt(self.num_imgs_mosaic))
             subplot_cols = math.ceil(self.num_imgs_mosaic/subplot_rows)
 
-            _, ax = plt.subplots(subplot_rows, subplot_cols)
+            _, ax = plt.subplots(subplot_rows, subplot_cols, figsize=(22, 10))
             ax = ax.flatten()
             for img in range(subplot_rows*subplot_cols):
                 if img < self.num_imgs_mosaic:
@@ -53,6 +54,15 @@ class Mosaic():
             
             plt.tight_layout()
             plt.show()
+
+    def apply_clahe(self):
+        clahe_imgs = []
+        clahe = cv2.createCLAHE(clipLimit=10)
+        for img in self.mosaic_imgs_gray:
+            clahe_imgs.append(clahe.apply(img))
+
+        self.clahe_images = clahe_imgs
+
 
     def apply_radiometric_correction(self):
         f = np.array(self.mosaic_imgs_gray)
