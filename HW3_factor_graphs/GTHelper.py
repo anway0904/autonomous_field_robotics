@@ -28,7 +28,7 @@ class GTHelper():
             H = match_dict[(src_idx, des_idx)]["H"]
             factor_pose = Pose2D.get_pose_from_homography(H)
             
-            noise = gtsam.noiseModel.Diagonal.Sigmas([e/err_multiplier, e/err_multiplier, e/err_multiplier])
+            noise = gtsam.noiseModel.Diagonal.Sigmas([e*err_multiplier, e*err_multiplier, np.deg2rad(e*2)])
                 
             self.graph.add(gtsam.BetweenFactorPose2(src_idx + 1, 
                                                     des_idx + 1, 
@@ -43,20 +43,31 @@ class GTHelper():
 
     def get_homography_post_optimization(self, poses, num_poses:int):
         homographies = []
+        pos_x = pos_y = pos_theta = 0
+        
         for i in range(1, num_poses + 1):
             tx = poses.atPose2(i).x()
             ty = poses.atPose2(i).y()
             theta = poses.atPose2(i).theta()
 
+            # c_theta = np.cos(theta - pos_theta)
+            # s_theta = np.sin(theta - pos_theta)
+
             c_theta = np.cos(theta)
             s_theta = np.sin(theta)
 
+            # H = np.matrix([[c_theta, -s_theta,  tx - pos_x],
+            #                [s_theta,  c_theta,  ty - pos_y],
+            #                [   0,        0,     1 ]])
+            
             H = np.matrix([[c_theta, -s_theta,  -tx],
                            [s_theta,  c_theta,  -ty],
                            [   0,        0,     1 ]])
-        
+            
+            pos_x = tx
+            pos_y = ty
+            pos_theta = theta
 
-            # homographies.insert(0,H)
             homographies.append(H)
 
         return homographies

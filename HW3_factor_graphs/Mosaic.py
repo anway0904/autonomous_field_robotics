@@ -57,7 +57,7 @@ class Mosaic():
 
     def apply_clahe(self):
         clahe_imgs = []
-        clahe = cv2.createCLAHE(clipLimit=10)
+        clahe = cv2.createCLAHE(clipLimit=3)
         for img in self.mosaic_imgs_gray:
             clahe_imgs.append(clahe.apply(img))
 

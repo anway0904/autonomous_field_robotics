@@ -113,21 +113,27 @@ def non_temporal_matching_bf(mosaic :object,
             continue
 
         src_points, dst_points, _ = features.match_features(mosaic.mosaic_imgs_gray[src_img_idx], 
-                                                                    mosaic.mosaic_imgs_gray[des_img_idx],
-                                                                    keypoints_list[src_img_idx],
-                                                                    keypoints_list[des_img_idx],
-                                                                    descriptor_list[src_img_idx],
-                                                                    descriptor_list[des_img_idx],
-                                                                    match_threshold=match_thresh,
-                                                                    plot=False)
+                                                            mosaic.mosaic_imgs_gray[des_img_idx],
+                                                            keypoints_list[src_img_idx],
+                                                            keypoints_list[des_img_idx],
+                                                            descriptor_list[src_img_idx],
+                                                            descriptor_list[des_img_idx],
+                                                            match_threshold=match_thresh,
+                                                            plot=False)
         
-        H, inliers = cv2.findHomography(src_points, dst_points, cv2.RANSAC, ransac_thresh)
-
-        
+        H, inliers = cv2.estimateAffinePartial2D(src_points, dst_points,None,cv2.RANSAC, ransac_thresh)
+        H = np.append(H, [[0, 0, 1]], axis=0)
         good, covar = homography.is_good(H, inliers, inlier_thresh, src_points, dst_points)
+
         if not good:
-            print(f"{src_img_idx} ---> {des_img_idx}: No match! ({np.count_nonzero(inliers)})")
-            continue
+            # Try reversing the matching (des --> src)
+            H, inliers = cv2.estimateAffinePartial2D(dst_points, src_points, None, cv2.RANSAC, ransac_thresh)
+            H = np.append(H, [[0, 0, 1]], axis=0)
+            good, covar = homography.is_good(H, inliers, inlier_thresh, src_points, dst_points)
+
+            if not good:
+                print(f"{src_img_idx} ---> {des_img_idx}: No match! ({np.count_nonzero(inliers)})")
+                continue
         
         if plot:
             plt.figure()

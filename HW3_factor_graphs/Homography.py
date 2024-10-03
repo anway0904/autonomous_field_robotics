@@ -23,4 +23,3 @@ class Homography:
             return False, None
              
         return True, np.mean(errors)
-        

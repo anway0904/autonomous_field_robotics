@@ -13,14 +13,12 @@ class Features():
                     edge_threshold:int = 10, #30
                     sigma_:float = 0.9) -> None: #0.06
         
-        self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
-                                        contrastThreshold = contrast_threshold,
-                                        edgeThreshold = edge_threshold,
-                                        sigma = sigma_)
+        # self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
+        #                                 contrastThreshold = contrast_threshold,
+        #                                 edgeThreshold = edge_threshold,
+        #                                 sigma = sigma_)
         
-        # self.detector = cv2.SIFT_create(nOctaveLayers = 4,
-        #                                 contrastThreshold = 0.03,
-        #                                 sigma = 1.0)
+        self.detector = cv2.SIFT_create(nOctaveLayers = 7)
         
         # self.detector = cv2.SIFT_create()
         
