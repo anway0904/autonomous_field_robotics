@@ -9,7 +9,9 @@ class Homography:
                 src_points:np.ndarray, 
                 dst_points:np.ndarray) -> tuple[bool, float]:
         
-        if np.count_nonzero(inliers) < inlier_thresh:
+        num_inliers = np.count_nonzero(inliers)
+
+        if num_inliers < inlier_thresh:
                 return False, None
         
         inliers_idx = np.where(inliers == 1)
@@ -22,4 +24,4 @@ class Homography:
         if np.mean(errors) > 5:
             return False, None
              
-        return True, np.mean(errors)
+        return True, 1000*np.mean(errors)/(num_inliers**2)

@@ -122,7 +122,7 @@ class Mosaic():
 
         return homographies_wrt_center
     
-    def warp_images(self, H:np.ndarray, min_x:int, min_y:int, max_x:int, max_y:int) -> np.ndarray:
+    def warp_images(self, H:np.ndarray, min_x:int, min_y:int, max_x:int, max_y:int, plot:bool) -> np.ndarray:
         """
         Warp all the images of the mosaic on a large canvas 
         
@@ -139,6 +139,12 @@ class Mosaic():
             warped_img = cv2.warpPerspective(np.copy(self.mosaic_images[i]), self.T @ H[i], self.canvas_shape)
             warped_images.append(warped_img)
 
+        if plot: 
+            for i in range(self.num_imgs_mosaic):
+                plt.figure()
+                plt.imshow(warped_images[i], cmap="gray")
+                plt.axis("off")
+
         return warped_images
     
     def transform_img_corners(self, H:np.ndarray) -> np.ndarray:
@@ -148,3 +154,34 @@ class Mosaic():
         transformed_corners = cv2.perspectiveTransform(img_corners, self.T @ H)
 
         return transformed_corners.reshape((-1, 2))
+    
+    def show_panorama(self, 
+                      warped_images:list, 
+                      homographies:np.ndarray):
+        
+        panorama = np.zeros_like(warped_images[0])
+        canvas_mask = np.copy(panorama[:,:,0]).astype(np.uint8)
+        alpha = 0.
+        gamma = 20
+
+        plt.figure(figsize=(12, 10))
+
+        for i in range(len(warped_images)):
+            transformed_corners = self.transform_img_corners(homographies[i])
+            warp_mask = np.zeros_like(warped_images[0][:,:,0], dtype=np.uint8)
+            cv2.fillPoly(warp_mask, [transformed_corners.astype(int)], 255)
+
+            overlap_mask = cv2.bitwise_and(warp_mask, canvas_mask)
+            not_overlap_mask = cv2.bitwise_not(overlap_mask)
+            overlap_idx = np.where(overlap_mask>0)
+            
+            panorama[overlap_idx] = (alpha)*panorama[overlap_idx] + ((1-alpha)*warped_images[i][overlap_idx]) + gamma
+            
+            panorama = cv2.bitwise_or(panorama, 
+                                    cv2.bitwise_and(warped_images[i],
+                                                    np.repeat(not_overlap_mask[:,:,np.newaxis], 3, axis=2)))
+            canvas_mask = cv2.bitwise_or(canvas_mask, warp_mask)
+
+        plt.imshow(panorama)
+        plt.axis('off')
+        plt.show()

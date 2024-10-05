@@ -97,7 +97,6 @@ def non_temporal_matching_bf(mosaic :object,
                              homography:classmethod,
                              keypoints_list:np.ndarray,
                              descriptor_list:np.ndarray,
-                             pivot:int,
                              match_thresh:float,
                              ransac_thresh:float,
                              inlier_thresh:int,
@@ -123,17 +122,14 @@ def non_temporal_matching_bf(mosaic :object,
         
         H, inliers = cv2.estimateAffinePartial2D(src_points, dst_points,None,cv2.RANSAC, ransac_thresh)
         H = np.append(H, [[0, 0, 1]], axis=0)
+        scale = np.sqrt(H[0, 0]**2+H[1, 0]**2)
+        H /= scale
+
         good, covar = homography.is_good(H, inliers, inlier_thresh, src_points, dst_points)
 
         if not good:
-            # Try reversing the matching (des --> src)
-            H, inliers = cv2.estimateAffinePartial2D(dst_points, src_points, None, cv2.RANSAC, ransac_thresh)
-            H = np.append(H, [[0, 0, 1]], axis=0)
-            good, covar = homography.is_good(H, inliers, inlier_thresh, src_points, dst_points)
-
-            if not good:
-                print(f"{src_img_idx} ---> {des_img_idx}: No match! ({np.count_nonzero(inliers)})")
-                continue
+            print(f"{src_img_idx} ---> {des_img_idx}: No match! ({np.count_nonzero(inliers)})")
+            continue
         
         if plot:
             plt.figure()
