@@ -157,14 +157,15 @@ class Mosaic():
     
     def show_panorama(self, 
                       warped_images:list, 
-                      homographies:np.ndarray):
+                      homographies:np.ndarray,
+                      fig_size=(12, 10)):
         
         panorama = np.zeros_like(warped_images[0])
         canvas_mask = np.copy(panorama[:,:,0]).astype(np.uint8)
         alpha = 0.
         gamma = 20
 
-        plt.figure(figsize=(12, 10))
+        plt.figure(figsize=fig_size)
 
         for i in range(len(warped_images)):
             transformed_corners = self.transform_img_corners(homographies[i])
