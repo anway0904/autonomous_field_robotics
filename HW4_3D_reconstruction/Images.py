@@ -20,11 +20,11 @@ class Images():
 
         for image in sorted(os.listdir(path), reverse=reverse):
             original_image = (cv2.cvtColor(cv2.imread(os.path.join(path, image)), cv2.COLOR_BGR2RGB))
-            resized_image = cv2.resize(original_image, (int(original_image.shape[1]*resize_factor),
-                                                        int(original_image.shape[0]*resize_factor)))
+            resized_image = cv2.resize(original_image, 
+                                       (int(original_image.shape[1]*resize_factor),
+                                        int(original_image.shape[0]*resize_factor)))
             
-            gray_img = cv2.normalize(cv2.cvtColor(resized_image, cv2.COLOR_RGB2GRAY), 
-                                     None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+            gray_img = cv2.cvtColor(resized_image, cv2.COLOR_RGB2GRAY)
 
             images.append(resized_image)
             gray_images.append(gray_img)

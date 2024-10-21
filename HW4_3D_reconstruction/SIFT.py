@@ -53,3 +53,23 @@ class SIFT():
             plt.show()
 
         return keypoints_arr, descriptors_arr
+    
+    def normalize_keypoints(self,
+                            src_points:np.ndarray,
+                            dst_points:np.ndarray,
+                            shape:np.ndarray):
+        
+        height, width = shape
+
+        t_x = t_x_dash = s_x = s_x_dash = width//2
+        t_y = t_y_dash = s_y = s_y_dash = height//2
+        
+        src_norm = np.divide(np.subtract(src_points, [[[t_x, t_y]]]), [[[s_x, s_y]]])
+        dst_norm = np.divide(np.subtract(dst_points, [[[t_x_dash, t_y_dash]]]), [[[s_x_dash, s_y_dash]]])
+
+        # De-normalization matrix 
+        T = np.array([[ 1/s_x,   0,    -t_x/s_x], 
+                      [  0,   1/s_y,   -t_y/s_y], 
+                      [  0,    0,        1   ]])
+        
+        return src_norm, dst_norm, T
