@@ -118,5 +118,5 @@ class FundamentalMat():
         for alpha_val in alpha_vals_real:
             F = (alpha_val * F1) + ((1-alpha_val)*F2)
 
-        return F
+        return F.astype(np.float32)
 
