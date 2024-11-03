@@ -13,6 +13,7 @@ class Matcher():
         self.keypoints = keypoints
         self.descriptors = descriptors
         
+        self.matcher = cv2.BFMatcher()
         self.MATCH_THRESH = 0.8
 
     def match_features(self,
@@ -24,8 +25,8 @@ class Matcher():
         Match features in image 1 and image 2
 
         """
-        matcher = cv2.BFMatcher()
-        matches = matcher.knnMatch(self.descriptors[src_idx], self.descriptors[dst_idx], k = 2)
+        
+        matches = self.matcher.knnMatch(self.descriptors[src_idx], self.descriptors[dst_idx], k = 2)
         
         good_matches = []
         src_points = []
