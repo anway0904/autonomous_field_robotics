@@ -157,7 +157,8 @@ class CvHelper():
 	def get_fundamental_mat(self,
 						 	src_points:np.ndarray,
 							dst_points:np.ndarray):
-		F, inlier_mask = cv2.findFundamentalMat(src_points, dst_points, method=cv2.RANSAC)
+		F, inlier_mask = cv2.findFundamentalMat(src_points, dst_points, method=cv2.RANSAC,
+										  ransacReprojThreshold=1.0)
 		
 		src_inliers = src_points[inlier_mask.ravel() == 1]
 		dst_inliers = dst_points[inlier_mask.ravel() == 1]
