@@ -189,21 +189,21 @@ class CvHelper():
 			x_0, y_0 = 0, -c/b
 			x_1, y_1 = width, -(c + a*width)/b
 
-			ax[1].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.4)
+			ax[1].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.2)
 
 			a, b, c = line_src
 			x_0, y_0 = 0, -c/b
 			x_1, y_1 = width, -(c + a*width)/b
 
-			ax[0].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.4)
+			ax[0].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.2)
 
 			count += 1
 
 		ax[1].scatter(dst_inliers[:min(max_lines, lines_dst.shape[0]), 0, 0], 
-					  dst_inliers[:min(max_lines, lines_dst.shape[0]), 0, 1], marker = "o", c = 'r', alpha=0.8)
+					  dst_inliers[:min(max_lines, lines_dst.shape[0]), 0, 1], s = 5, marker = "o", c = 'g', alpha=0.8)
 		
 		ax[0].scatter(src_inliers[:min(max_lines, lines_src.shape[0]), 0, 0], 
-					  src_inliers[:min(max_lines, lines_src.shape[0]), 0, 1], marker = "o", c = 'r', alpha=0.8)
+					  src_inliers[:min(max_lines, lines_src.shape[0]), 0, 1], s = 5, marker = "o", c = 'g', alpha=0.8)
 
 		ax[1].imshow(img_dst)
 		ax[1].axis("off")

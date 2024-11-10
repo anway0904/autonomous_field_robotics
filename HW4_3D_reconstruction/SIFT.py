@@ -38,7 +38,7 @@ class SIFT():
             subplot_rows = math.ceil(math.sqrt(num_images))
             subplot_cols = math.ceil(num_images/subplot_rows)
 
-            _, ax = plt.subplots(subplot_rows, subplot_cols, figsize=(22, 10))
+            _, ax = plt.subplots(subplot_rows, subplot_cols, figsize=(20, 30))
             ax = ax.flatten()
 
             for img in range(subplot_rows*subplot_cols):

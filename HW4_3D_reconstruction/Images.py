@@ -10,7 +10,8 @@ class Images():
         self.rgb  = None
         self.gray = None
         self.shape = None
-    
+        self.clahe = None
+
     def read_imgs_from_folder(self, path:str, resize_factor:float, show_imgs:bool, reverse:bool = False) -> np.ndarray:
         """
         Read images from a folder, convert to grayscale and resize them according to the resize factor.
@@ -49,3 +50,11 @@ class Images():
             
             plt.tight_layout()
             plt.show()
+
+    def apply_clahe(self):
+        clahe_imgs = []
+        clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8,8))
+        for img in self.gray:
+            clahe_imgs.append(clahe.apply(img))
+
+        self.clahe = clahe_imgs
