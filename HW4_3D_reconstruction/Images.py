@@ -53,7 +53,7 @@ class Images():
 
     def apply_clahe(self):
         clahe_imgs = []
-        clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=3, tileGridSize=(10, 10))
         for img in self.gray:
             clahe_imgs.append(clahe.apply(img))
 

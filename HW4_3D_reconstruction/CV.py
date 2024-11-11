@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import deque
+from collections import deque, defaultdict
 
 class CvHelper():
 	def __init__(self):
@@ -30,7 +30,7 @@ class CvHelper():
 		
 		_, R, t, inlier_mask = cv2.recoverPose(E, src_points, dst_points, self.K)
 	
-		P = self.K @ np.hstack((R, t))
+		P = np.hstack((R, t))
 
 		src_inliers = src_points[inlier_mask.ravel() != 0]
 		dst_inliers = dst_points[inlier_mask.ravel() != 0]

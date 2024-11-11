@@ -73,3 +73,27 @@ class SIFT():
                       [  0,    0,        1   ]])
         
         return src_norm, dst_norm, T
+    
+    def apply_nms(self, keypoints, descriptors, imgs):
+
+        keypoints_nms = []
+        descriptors_nms = []
+
+        for kps, dcs in zip(keypoints, descriptors):
+            binary_image = np.zeros((imgs.shape[0], imgs.shape[1]))
+            response_list = np.array([kp.response for kp in kps])
+            
+            mask = np.flip(np.argsort(response_list))
+            
+            point_list = np.rint([kp.pt for kp in kps])[mask].astype(int)
+            
+            non_max_suppression_mask = []
+            for point, index in zip(point_list, mask):
+                if binary_image[point[1], point[0]] == 0:
+                    non_max_suppression_mask.append(index)
+                    cv2.circle(binary_image, (point[0], point[1]), 3, 255, -1)
+            
+            keypoints_nms.append(np.array(kps)[non_max_suppression_mask])
+            descriptors_nms.append(np.array(dcs)[non_max_suppression_mask])
+
+        return keypoints_nms, descriptors_nms
