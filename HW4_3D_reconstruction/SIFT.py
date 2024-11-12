@@ -13,11 +13,6 @@ class SIFT():
                         edge_threshold:int = None,
                         sigma_:float = None) -> None:
         
-        # self.detector = cv2.SIFT_create(nOctaveLayers = n_octave_layers,
-        #                                 contrastThreshold = contrast_threshold,
-        #                                 edgeThreshold = edge_threshold,
-        #                                 sigma = sigma_)
-        
         self.detector = cv2.SIFT_create()
         
     
