@@ -23,56 +23,21 @@ class CvHelper():
 					   	  F:np.ndarray):
 		return self.K.T @ F @ self.K
 	
-	def get_projection_matrix(self,
-						   	  E:np.ndarray,
-							  src_points:np.ndarray,
-							  dst_points:np.ndarray):
+	def get_extrinsic_and_projection_matrix(self,
+						   	  				E:np.ndarray,
+							  				src_points:np.ndarray,
+							  				dst_points:np.ndarray):
 		
 		_, R, t, inlier_mask = cv2.recoverPose(E, src_points, dst_points, self.K)
 	
-		P = np.hstack((R, t))
+		P = self.K @ np.hstack((R, t))
+		C = np.hstack((R, t))
+		T = np.vstack((C, [0,0,0,1]))
 
 		src_inliers = src_points[inlier_mask.ravel() != 0]
 		dst_inliers = dst_points[inlier_mask.ravel() != 0]
 
-		return P, src_inliers, dst_inliers
-	
-	def normalize_points(self,
-					  	 points:np.ndarray, 
-					     img_shape:np.ndarray):
-		# height, width = img_shape
-
-		# tx = sx = width//2
-		# ty = sy = height//2
-
-		
-		# T = np.array([[ 1/sx,   0,    -tx/sx], 
-        #       		  [  0,   1/sy,   -ty/sy], 
-        #       		  [  0,    0,        1  ]])
-		
-		# points_norm = cv2.perspectiveTransform(points, T).reshape(-1,2)
-		points = points.reshape(-1, 2)
-
-		# Step 1: Compute the centroid of the points
-		centroid = np.mean(points, axis=0)
-
-		# Step 2: Translate points so that the centroid is at the origin
-		translated_points = points - centroid
-
-		# Step 3: Compute the RMS distance of the points from the origin
-		rms_distance = np.sqrt(np.mean(np.sum(translated_points**2, axis=1)))
-
-		# Step 4: Scale points so that RMS distance is sqrt(2)
-		scale_factor = np.sqrt(2) / rms_distance
-		normalized_points = translated_points * scale_factor
-
-		# Step 5: Construct the normalization matrix
-		T = np.array([
-			[scale_factor, 0, -scale_factor * centroid[0]],
-			[0, scale_factor, -scale_factor * centroid[1]],
-			[0, 0, 1]
-		])
-		return normalized_points, T
+		return P, C, T, src_inliers, dst_inliers
 
 	def estimate_F_svd(self, 
 					   T_src:np.ndarray,
@@ -100,59 +65,6 @@ class CvHelper():
 		F = T_src.T @ F @ T_dst
 			
 		return F
-
-	def get_fundamental_mat_8_pt_norm(self,
-										img_shape:np.ndarray,
-										src_points:np.ndarray,
-										dst_points:np.ndarray):
-					
-		src_points_norm, T_src = self.normalize_points(src_points, img_shape)
-		dst_points_norm, T_dst = self.normalize_points(dst_points, img_shape)
-
-		F = self.estimate_F_svd(T_src, T_dst, src_points_norm, dst_points_norm)
-		
-		return F, None, None, None
-	
-	def get_fundamental_mat_8_pt_ransac(self,
-								   img_shape:np.ndarray,
-								   src_points:np.ndarray,
-								   dst_points:np.ndarray,
-								   ransac_iter: int = 1000,
-								   ransac_thresh: float = 1.0):
-		
-		num_points = src_points.shape[0]
-		
-		best_inliers = 0
-		best_inlier_mask = None
-
-		for _ in range(ransac_iter):
-			random_8_idx = np.random.randint(0, num_points, 8)
-			src_8_points = src_points[random_8_idx] # points_src
-			dst_8_points = dst_points[random_8_idx] # points_dst
-			
-			src_8_points_norm, T_src = self.normalize_points(src_8_points, img_shape)
-			dst_8_points_norm, T_dst = self.normalize_points(dst_8_points, img_shape)
-
-			F = self.estimate_F_svd(T_src, T_dst, src_8_points_norm, dst_8_points_norm)
-			
-			distances = self.compute_sampson_distance(F, src_points, dst_points)
-			inlier_mask = distances < ransac_thresh
-			num_inliers = np.sum(inlier_mask)
-
-			if num_inliers > best_inliers:
-				best_inliers = num_inliers
-				best_inlier_mask = inlier_mask
-				print(f"Found better solution with {num_inliers}/{num_points} inliers")
-
-		# Final refinement using all inliers
-		src_inliers = src_points[best_inlier_mask]
-		dst_inliers = dst_points[best_inlier_mask]
-
-		src_inliers_norm, T_src = self.normalize_points(src_inliers, img_shape)
-		dst_inliers_norm, T_dst = self.normalize_points(dst_inliers, img_shape)
-		F_final = self.estimate_F_svd(T_src, T_dst, src_inliers_norm, dst_inliers_norm)
-
-		return F_final, best_inlier_mask, src_inliers, dst_inliers
 	
 	def get_fundamental_mat(self,
 						 	src_points:np.ndarray,
@@ -213,8 +125,8 @@ class CvHelper():
 
 		plt.show()
 
-	def update_cv_container(self, src_idx, dst_idx, F = None, E = None, P = None):
-		self.cv_container[(src_idx, dst_idx)] = {"F": F, "E":E, "P":P}
+	def update_cv_container(self, src_idx, dst_idx, F = None, E = None, P = None, C = None, T = None):
+		self.cv_container[(src_idx, dst_idx)] = {"F": F, "E":E, "P":P, "C":C, "T":T}
 
 	def update_pt_container(self, src_idx, dst_idx, src_points, dst_points):
 		self.pt_container[(src_idx, dst_idx)] = {"src":src_points, "dst":dst_points}
