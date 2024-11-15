@@ -13,21 +13,85 @@ class CvHelper():
 						  	 fx:float,
 						  	 fy:float,
 							 cx:float,
-							 cy:float):
+							 cy:float) -> None:
 		
+		"""
+		Set the parmeters of the intrinsic matrix of the camera.
+		
+		Args:
+			fx (float): focal length of the camera in x
+			fy (float): focal length of the camera in y
+			cx (float): center of projection in x
+			cy (float): center of projection in y
+
+		Returns:
+			None : 
+		"""
 		self.K = np.array([[fx, 0, cx],
 					 	   [0, fy, cy],
 						   [0,  0,  1]])
 	
 	def get_essential_mat(self,
 					   	  F:np.ndarray):
-		return self.K.T @ F @ self.K
+		
+		"""
+		Computes the Essential matrix from the Fundamental matrix using the intrinsic camera matrix.
+
+		The Essential matrix (E) is obtained as: E = K.T @ F @ K,
+		where K is the intrinsic matrix of the camera.
+
+		Args:
+			F (numpy.ndarray): Fundamental matrix of shape [3, 3].
+
+		Returns:
+			numpy.ndarray: Essential matrix of shape [3, 3].
+		"""
+
+		E = self.K.T @ F @ self.K
+
+		return E
+	
+	def get_essential_mat_cv(self,
+						     src_points:np.ndarray,
+							 dst_points:np.ndarray):
+		"""
+		Additional function to compute the essential matrix using the cv2 function.
+		This function gives better results as compared to first computing the fundamental matrix 
+		and then computing the essential matrix as E = K.T @ F @ K
+
+
+		"""
+		E, inlier_mask = cv2.findEssentialMat(src_points, dst_points, self.K)
+		src_inliers = src_points[inlier_mask.ravel() != 0]
+		dst_inliers = dst_points[inlier_mask.ravel() != 0]
+
+		return E, src_inliers, dst_inliers
 	
 	def get_extrinsic_and_projection_matrix(self,
 						   	  				E:np.ndarray,
 							  				src_points:np.ndarray,
 							  				dst_points:np.ndarray):
-		
+		"""
+		Recovers the camera pose (extrinsic matrix) from the Essential matrix.
+
+		This function estimates the camera's rotation and translation (extrinsic parameters)
+		with respect to the world frame, given the Essential matrix. It also computes the 
+		projection matrix from the recovered extrinsic matrix. Additionally, the function 
+		refines the inlier source and destination points after computing the extrinsic matrix.
+
+		Args:
+			E (numpy.ndarray): Essential matrix of shape [3, 3].
+			src_points (numpy.ndarray): Inlier source points of shape [N, 1, 2], obtained after computing the Fundamental matrix.
+			dst_points (numpy.ndarray): Inlier destination points of shape [N, 1, 2], obtained after computing the Fundamental matrix.
+
+		Returns:
+			P (numpy.ndarray): Projection matrix of shape [3, 4].
+			C (numpy.ndarray): Extrinsic matrix of shape [3, 4].
+			T (numpy.ndarray): Homogeneous extrinsic matrix of shape [4, 4].
+			src_inliers (numpy.ndarray): Refined inlier source points of shape [N, 1, 2].
+			dst_inliers (numpy.ndarray): Refined inlier destination points of shape [N, 1, 2].
+		"""
+
 		_, R, t, inlier_mask = cv2.recoverPose(E, src_points, dst_points, self.K)
 	
 		P = self.K @ np.hstack((R, t))
@@ -38,37 +102,14 @@ class CvHelper():
 		dst_inliers = dst_points[inlier_mask.ravel() != 0]
 
 		return P, C, T, src_inliers, dst_inliers
-
-	def estimate_F_svd(self, 
-					   T_src:np.ndarray,
-					   T_dst:np.ndarray,
-					   src_points: np.ndarray,
-					   dst_points: np.ndarray):
-		
-		num_points = src_points.shape[0]
-		
-		A = np.zeros((num_points, 9))
-		for i in range(num_points):
-			x1, y1 = src_points[i]
-			x2, y2 = dst_points[i]
-			A[i] = [x1*x2, x1*y2, x1, y1*x2, y1*y2, y1, x2, y2, 1]
-
-		_, _, V = np.linalg.svd(A)
-		F = V[-1].reshape(3, 3)
-
-		# Enforce rank-2 constraint
-		U_F, S_F, V_F = np.linalg.svd(F)
-		S_F[-1] = 0
-		F = U_F @ np.diag(S_F) @ V_F
-
-		# Denormalize
-		F = T_src.T @ F @ T_dst
-			
-		return F
 	
 	def get_fundamental_mat(self,
 						 	src_points:np.ndarray,
 							dst_points:np.ndarray):
+		
+		"""
+		
+		"""
 		F, inlier_mask = cv2.findFundamentalMat(src_points, dst_points, method=cv2.RANSAC,
 										  ransacReprojThreshold=1.0)
 		
@@ -125,8 +166,8 @@ class CvHelper():
 
 		plt.show()
 
-	def update_cv_container(self, src_idx, dst_idx, F = None, E = None, P = None, C = None, T = None):
-		self.cv_container[(src_idx, dst_idx)] = {"F": F, "E":E, "P":P, "C":C, "T":T}
+	def update_cv_container(self, src_idx, dst_idx, F = None, E = None, P = None, C = None, T = None, PTS = None):
+		self.cv_container[(src_idx, dst_idx)] = {"F": F, "E":E, "P":P, "C":C, "T":T, "PTS": PTS}
 
 	def update_pt_container(self, src_idx, dst_idx, src_points, dst_points):
 		self.pt_container[(src_idx, dst_idx)] = {"src":src_points, "dst":dst_points}

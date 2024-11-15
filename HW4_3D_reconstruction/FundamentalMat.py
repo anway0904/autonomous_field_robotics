@@ -6,7 +6,7 @@ import time
 class FundamentalMat():
     @staticmethod
     def normalize_points(points:np.ndarray):
-        """
+        '''
         Normalizes the array points such as the centroid is at origin of the coordinates
         and RMS distance of points from the origin is sqrt(2)
 
@@ -16,7 +16,7 @@ class FundamentalMat():
         Returns:
             normalized_points [N, 2]: 
             T [3, 3]                : normalization matrix
-        """
+        '''
         points = points.reshape(-1, 2)
 
         centroid = np.mean(points, axis=0)
@@ -53,28 +53,16 @@ class FundamentalMat():
         sample_count = 0
         max_inliers = -np.inf
 
-        while (sample_count < 100):
-            start_time = time.perf_counter()
-
+        while (sample_count < N):
             indices = np.random.choice(num_points, 7, replace=False)
             src_7_points = src_points[indices].reshape(7, 2)
             dst_7_points = dst_points[indices].reshape(7, 2)
 
-            # src_7_points_norm, T_src = FundamentalMat.normalize_points()
-
-            F1, F2 = FundamentalMat.get_null_space_generators(src_7_points,
-                                                              dst_7_points)
-            
+            F1, F2 = FundamentalMat.get_null_space_generators(src_7_points,dst_7_points)
             F_array = FundamentalMat.solve_for_alpha_and_F(F1, F2)
-            
-            # indices = np.random.choice(num_points, 10, replace=False)
-            # src_7_points = src_points[indices].reshape(10, 2)
-            # dst_7_points = dst_points[indices].reshape(10, 2)
-            # FundamentalMat.estimate_F_svd()
 
             for F in F_array:
-                inlier_mask, num_inliers = FundamentalMat.evaluate_F(src_points,
-                                                                     dst_points, F)
+                inlier_mask, num_inliers = FundamentalMat.evaluate_F(src_points,dst_points, F)
                 
                 if num_inliers > max_inliers:
                     best_F = F
@@ -82,7 +70,7 @@ class FundamentalMat():
                     max_inliers = num_inliers
 
             e = 1 - (num_inliers/num_points)
-            N = np.log10(1 - 0.99)/np.log10(1-(1-e)**7)
+            N = np.log(1 - 0.99)/np.log(1-(1-e)**7)
             sample_count += 1
             # print("TIME: ", (time.perf_counter() - start_time)*1000)
         
