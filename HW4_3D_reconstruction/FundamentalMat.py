@@ -59,14 +59,18 @@ class FundamentalMat():
             indices = np.random.choice(num_points, 7, replace=False)
             src_7_points = src_points[indices].reshape(7, 2)
             dst_7_points = dst_points[indices].reshape(7, 2)
-            
-            
+
+            # src_7_points_norm, T_src = FundamentalMat.normalize_points()
 
             F1, F2 = FundamentalMat.get_null_space_generators(src_7_points,
                                                               dst_7_points)
             
             F_array = FundamentalMat.solve_for_alpha_and_F(F1, F2)
             
+            # indices = np.random.choice(num_points, 10, replace=False)
+            # src_7_points = src_points[indices].reshape(10, 2)
+            # dst_7_points = dst_points[indices].reshape(10, 2)
+            # FundamentalMat.estimate_F_svd()
 
             for F in F_array:
                 inlier_mask, num_inliers = FundamentalMat.evaluate_F(src_points,
@@ -77,8 +81,8 @@ class FundamentalMat():
                     best_inlier_mask = inlier_mask
                     max_inliers = num_inliers
 
-            # e = 1 - (num_inliers/num_points)
-            # N = np.log10(1 - 0.99)/np.log10(1-(1-e)**7)
+            e = 1 - (num_inliers/num_points)
+            N = np.log10(1 - 0.99)/np.log10(1-(1-e)**7)
             sample_count += 1
             # print("TIME: ", (time.perf_counter() - start_time)*1000)
         
@@ -160,6 +164,34 @@ class FundamentalMat():
             F_array.append(F.astype(np.float32))
 
         return F_array
+    
+    @staticmethod
+    def estimate_F_svd( 
+					   T_src:np.ndarray,
+					   T_dst:np.ndarray,
+					   src_points: np.ndarray,
+					   dst_points: np.ndarray):
+		
+        num_points = src_points.shape[0]
+
+        A = np.zeros((num_points, 9))
+        for i in range(num_points):
+            x1, y1 = src_points[i]
+            x2, y2 = dst_points[i]
+            A[i] = [x1*x2, x1*y2, x1, y1*x2, y1*y2, y1, x2, y2, 1]
+
+        _, _, V = np.linalg.svd(A)
+        F = V[-1].reshape(3, 3)
+
+        # Enforce rank-2 constraint
+        U_F, S_F, V_F = np.linalg.svd(F)
+        S_F[-1] = 0
+        F = U_F @ np.diag(S_F) @ V_F
+
+        # Denormalize
+        F = T_src.T @ F @ T_dst
+            
+        return F
     
     @staticmethod
     def evaluate_F(src_points:np.ndarray,

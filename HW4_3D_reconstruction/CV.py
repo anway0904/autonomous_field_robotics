@@ -101,13 +101,13 @@ class CvHelper():
 			x_0, y_0 = 0, -c/b
 			x_1, y_1 = width, -(c + a*width)/b
 
-			ax[1].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.2)
+			ax[1].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.3)
 
 			a, b, c = line_src
 			x_0, y_0 = 0, -c/b
 			x_1, y_1 = width, -(c + a*width)/b
 
-			ax[0].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.2)
+			ax[0].plot([x_0, x_1], [y_0, y_1], c = color, alpha = 0.3)
 
 			count += 1
 
