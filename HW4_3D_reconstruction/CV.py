@@ -271,14 +271,102 @@ class CvHelper():
 
 		Parameters
 		----------
-		src_idx : int
-				  index of the source image
-		dst_idx : int
-				  index of the destination image
+		src_idx 	: int
+				  	  index of the source image
+		dst_idx 	: int
+					  index of the destination image
 		src_points  : numpy.ndarray
 					  source points obtained after recovering pose from E of shape [N, 1, 2]
 		dst_points  : numpy.ndarray
 					  destination points obtained after recovering pose from E of shape [N, 1, 2]
 		"""
-		
+
 		self.pt_container[(src_idx, dst_idx)] = {"src":src_points, "dst":dst_points}
+
+	def get_camera_trajectory(self, ref_idx:int, num_indices:int, max_idx:int):
+		"""
+		Computes the camera trajectory. Given the homogeneous extrinsic matrices between consecutive
+		pairs of images, this function will return a list containing the transformations all expressed in 
+		the first camera's (given by ref image) coordinate frame [1-->2, 1-->3, 1-->4 and so on..]
+
+		Parameters
+		----------
+		ref_img	 	: int
+				   	  The idx of reference image whose coordinate frame is at origin of world frame
+		num_indices : int
+				   	  The indices of total number of images (frames) in the trajectory
+		max_idx		: int
+					  The largest index available in the image data [len(images_array)]
+		Returns
+		-------
+		camera_poses : list
+					   A list containing the transformations as described above. Each transformation is of shape [4, 4]
+		"""
+		camera_poses = [np.vstack((np.hstack((np.eye(3), np.zeros((3, 1)))), [0,0,0,1]))]
+
+		for idx in range(ref_idx, min(ref_idx + num_indices, max_idx-1)):
+			src_idx = idx
+			dst_idx = idx + 1
+			T = self.cv_container[(src_idx, dst_idx)]["T"]
+			camera_poses.append(camera_poses[idx - ref_idx] @ T)
+
+		return camera_poses
+	
+	def triangulate_points(self, src_idx:int, dst_idx:int):
+		"""
+		Triangulates the points based on the matches in the source and the destination image.
+		Note that here, the triangulated points are in the coordinate frame of the source image
+
+		Parameters
+		----------
+		src_idx : int
+				  the index of the source image
+		dst_idx : int
+				  the index of the destination image
+
+		Returns
+		-------
+		points_3d : np.ndarray
+					Triangulated points of shape [N, 3]
+		"""
+		identity_projection = self.K @ np.hstack((np.eye(3), np.zeros((3, 1))))
+
+		P1 = identity_projection
+		P2 = self.cv_container[(src_idx, dst_idx)]["P"]
+
+		points_3d_homogeneous = cv2.triangulatePoints(P1, P2,
+													  self.pt_container[(src_idx, dst_idx)]["src"], 
+													  self.pt_container[(src_idx, dst_idx)]["dst"])
+
+		points_3d_homogeneous /= points_3d_homogeneous[3] 
+		points_3d = points_3d_homogeneous[:3, :].T  
+
+		return points_3d
+	
+	def transform_points(self, extrinsic_mat:np.ndarray, points:np.ndarray):
+		"""
+		Transforms the triangulated points in the reference image's coordinate frame.
+		The extrinsic matrix is the transformation that takes the point from the reference coordinate frame
+		to the image coordinate frame. Hence the inverse transformation is applied over here
+
+		Parameters
+		----------
+		extrinsic_mat : np.ndarray
+						The transformation matrix from ref frame to img frame of shape [4, 4]
+		points		  : np.ndarray
+						The triangulated 3D points in image's coordinate frame of shape [N, 3]
+
+		Returns
+		-------
+		transformed_points : np.ndarray
+							 The transformed points in reference coordinate frame
+		"""
+		transformed_points = []
+		for point in points:
+			R = extrinsic_mat[:3,:3]
+			t = extrinsic_mat[:3, 3]
+
+			transformed_points.append(R.T @ (point - t))
+		
+		
+		return np.array(transformed_points)
