@@ -312,7 +312,7 @@ class CvHelper():
 
 		return camera_poses
 	
-	def triangulate_points(self, src_idx:int, dst_idx:int):
+	def triangulate_points(self,src_idx:int, dst_idx:int, P1:np.ndarray = None, P2:np.ndarray = None):
 		"""
 		Triangulates the points based on the matches in the source and the destination image.
 		Note that here, the triangulated points are in the coordinate frame of the source image
@@ -331,8 +331,9 @@ class CvHelper():
 		"""
 		identity_projection = self.K @ np.hstack((np.eye(3), np.zeros((3, 1))))
 
-		P1 = identity_projection
-		P2 = self.cv_container[(src_idx, dst_idx)]["P"]
+		if P1 is None and P2 is None:
+			P1 = identity_projection
+			P2 = self.cv_container[(src_idx, dst_idx)]["P"]
 
 		points_3d_homogeneous = cv2.triangulatePoints(P1, P2,
 													  self.pt_container[(src_idx, dst_idx)]["src"], 
