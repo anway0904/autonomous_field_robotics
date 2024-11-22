@@ -5,12 +5,13 @@ class Plots:
     def __init__(self, figsize=(10, 10)):
         self.fig = plt.figure(figsize=figsize)
         self.ax = self.fig.add_subplot(111, projection='3d')
-        self.ax.set_xlim([-10, 10])
-        self.ax.set_ylim([-10, 10])
-        self.ax.set_zlim([-10, 10])
+        # self.ax.set_xlim([-10, 10])
+        # self.ax.set_ylim([-10, 10])
+        # self.ax.set_zlim([-10, 10])
         self.ax.set_xlabel('X axis')
         self.ax.set_ylabel('Y axis')
         self.ax.set_zlabel('Z axis')
+        # self.ax.set_aspect('equal')
 
     @staticmethod
     def validate_inputs(R: np.ndarray, t: np.ndarray):
@@ -42,3 +43,15 @@ class Plots:
         if points.ndim != 2 or points.shape[1] != 3:
             raise ValueError("Points array must have shape (N, 3).")
         self.ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='b', marker='o', s=5)
+
+    def set_axes_equal(self):
+        limits = np.array([self.ax.get_xlim3d(),
+                           self.ax.get_ylim3d(),
+                           self.ax.get_zlim3d(),])
+
+        origin = np.mean(limits, axis=1)
+        radius = 0.5 * np.max(np.abs(limits[:, 1] - limits[:, 0]))
+
+        self.ax.set_xlim3d([origin[0] - radius, origin[0] + radius])
+        self.ax.set_ylim3d([origin[1] - radius, origin[1] + radius])
+        self.ax.set_zlim3d([origin[2] - radius, origin[2] + radius])

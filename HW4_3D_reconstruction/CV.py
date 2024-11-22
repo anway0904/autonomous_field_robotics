@@ -331,8 +331,10 @@ class CvHelper():
 		"""
 		identity_projection = self.K @ np.hstack((np.eye(3), np.zeros((3, 1))))
 
-		if P1 is None and P2 is None:
+		if P1 is None:
 			P1 = identity_projection
+
+		if P2 is None:
 			P2 = self.cv_container[(src_idx, dst_idx)]["P"]
 
 		points_3d_homogeneous = cv2.triangulatePoints(P1, P2,
@@ -369,5 +371,55 @@ class CvHelper():
 
 			transformed_points.append(R.T @ (point - t))
 		
-		
 		return np.array(transformed_points)
+	
+	def calculate_scale_error(self, 
+							  landmark_pixel_tracker:dict, 
+						   	  landmark_point_tracker:dict,
+							  src_idx:int, dst_idx:int, 
+							  transformed_points_3d:np.ndarray):
+		"""
+		Calculates the scale error between common points in the multiple views. The scale error is calculated as
+		the ratio of norm of the traingulated points in multiple views.
+
+		Parameters
+		----------
+		landmark_pixel_tracker 	: dict
+								  The dictionary containing the pixel coordinates of the landmarks
+		landmark_point_tracker	: dict
+								  The dictionary containing the 3D coordinates of the landmarks
+		src_idx					: int
+								  The index of the source image
+		dst_idx 				: int
+								  The index of the destination image
+		transformed_points_3d	: np.ndarray
+								  The triangulated 3D points in the source image's coordinate frame
+								  
+		Returns
+		-------
+		scale 					: float
+								  The scale error between the common points in the multiple views
+		match_idx_src			: np.ndarray
+								  The indices of the matching points in the source image 
+		match_idx_lm			: np.ndarray
+								  The indices of the matching points in the landmark point tracker
+		"""
+		current_src_pts = self.pt_container[(src_idx, dst_idx)]["src"]
+		landmark_pts = np.array(list(landmark_pixel_tracker.values()))
+		
+		try:
+			match_idx_src, match_idx_lm = np.nonzero((current_src_pts == landmark_pts).all(axis = 2))
+		except AttributeError:
+			match_idx_src, match_idx_lm = np.array([]), np.array([])
+
+		if len(match_idx_src) > 0:
+			scale = 0
+			for idx_src, idx_lm in zip(match_idx_src, match_idx_lm):
+				scale += np.linalg.norm(landmark_point_tracker[idx_lm])/np.linalg.norm(transformed_points_3d[idx_src])
+
+			scale /= len(match_idx_src)
+		else:
+			scale = 1
+
+		# print(len(match_idx_src))
+		return scale, match_idx_src, match_idx_lm
